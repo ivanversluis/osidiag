@@ -35,11 +35,13 @@ The Foundation also requires an already released project and sufficient verifiab
 - [x] First official tagged release and downloadable Windows executable. [v0.4.1](https://github.com/ivanversluis/osidiag/releases/tag/v0.4.1) includes the unsigned Windows AMD64 ZIP, Linux AMD64/ARM64 archives and `SHA256SUMS`. All three downloaded archives matched the manifest.
 - [x] Unsigned release pipeline exercised. The [release run](https://github.com/ivanversluis/osidiag/actions/runs/45800823995) verified the annotated tag, Windows metadata and unsigned status, then published checksums and build attestations. GitHub has attestations for the downloaded digests; independent attestation signature verification is not recorded here.
 - [x] The published Windows ZIP contains only the project-built `osidiag.exe`, `LICENSE` and `NOTICE`. No separate third-party binary is bundled.
-- [ ] Smoke-test the downloaded ZIP on clean, native Windows 11. Confirm `NotSigned`, v0.4.1 version metadata and that a basic diagnostic runs with normal Windows protections intact.
+- [x] Windows PowerShell inspection of the extracted v0.4.1 package reported `NotSigned`, product name `osidiag`, and product and file versions `0.4.1`.
+- [ ] Run a basic diagnostic from the extracted ZIP on native Windows 11 with normal Windows protections intact.
 - [x] The public [Code signing policy](https://networknet.nl/projects/osidiag/code-signing/) is available and documents roles, privacy and portable uninstall. The v0.4.1 release notes link to the repository policy.
 - [x] [Networknet PR #72](https://github.com/ivanversluis/networknet/pull/72) is live. The [project page](https://networknet.nl/projects/osidiag/) and [announcement](https://networknet.nl/notes/osidiag-network-troubleshooting/) link to v0.4.1, label the Windows ZIP unsigned and link to the policy. The project page describes portable installation and removal.
 - [x] Disclose the sole-maintainer roles and the absence of independent review of the maintainer's own commits. SignPath decides whether this model qualifies.
-- [ ] Confirm GitHub MFA. Configure or verify active review and release controls for `main` and `v*` tags; GitHub's public API reported `main` unprotected and no active rules for it on 26 November 2026.
+- [x] GitHub MFA: the maintainer confirmed that an authenticator app is configured.
+- [ ] Configure or verify active review and release controls for `main` and `v*` tags; GitHub's public API reported `main` unprotected and no active rules for it on 26 November 2026.
 - [ ] Add a short description of osidiag's network troubleshooting functions to the GitHub download page. The v0.4.1 notes describe the packages and link to the project page, but do not directly describe the tool's functionality.
 - [ ] Review the shipped diagnostic features against the [SignPath conditions](https://signpath.org/terms.html), including the vulnerability-scanning restriction. Describe the features as shipped and let SignPath decide eligibility.
 - [ ] Provide a maintainer contact, review the terms, and submit the application. Do not put private contact details in this repository.
