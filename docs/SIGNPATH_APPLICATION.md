@@ -1,6 +1,6 @@
 # SignPath Foundation application — osidiag
 
-**Application status: not submitted.** The first public Windows build is available in v0.4.1 and is unsigned. Complete the open pre-application checks below before submitting at https://signpath.org/apply.html.
+**Application status: not submitted.** The first public Windows build is available in v0.4.1 and is unsigned. Complete the open pre-application checks below before submitting at https://signpath.org/apply.html. The reusable GitHub ruleset templates, release-note text and operator-only commands are in [SIGNPATH_GITHUB_CONTROLS.md](SIGNPATH_GITHUB_CONTROLS.md); these files do **not** activate GitHub settings.
 
 | Field / evidence | Proposed answer |
 | --- | --- |
@@ -41,8 +41,8 @@ The Foundation also requires an already released project and sufficient verifiab
 - [x] [Networknet PR #72](https://github.com/ivanversluis/networknet/pull/72) is live. The [project page](https://networknet.nl/projects/osidiag/) and [announcement](https://networknet.nl/notes/osidiag-network-troubleshooting/) link to v0.4.1, label the Windows ZIP unsigned and link to the policy. The project page describes portable installation and removal.
 - [x] Disclose the sole-maintainer roles and the absence of independent review of the maintainer's own commits. SignPath decides whether this model qualifies.
 - [x] GitHub MFA: the maintainer confirmed that an authenticator app is configured.
-- [ ] Configure or verify active review and release controls for `main` and `v*` tags; GitHub's public API reported `main` unprotected and no active rules for it on 26 November 2026.
-- [ ] Add a short description of osidiag's network troubleshooting functions to the GitHub download page. The v0.4.1 notes describe the packages and link to the project page, but do not directly describe the tool's functionality.
+- [ ] Configure or verify active review and release controls for `main` and `v*` tags; GitHub's public API returned no repository rulesets on 26 November 2026. Reproducible ruleset definitions are prepared in `.github/rulesets/`, but are **not** applied automatically. Classic branch-protection status must also be checked by the maintainer.
+- [ ] Add a short description of osidiag's network troubleshooting functions to the GitHub download page. Updated notes are prepared in `docs/v0.4.1-release-notes.md` but the public v0.4.1 release still needs to be edited and checked.
 - [ ] Review the shipped diagnostic features against the [SignPath conditions](https://signpath.org/terms.html), including the vulnerability-scanning restriction. Describe the features as shipped and let SignPath decide eligibility.
 - [ ] Provide a maintainer contact, review the terms, and submit the application. Do not put private contact details in this repository.
 
