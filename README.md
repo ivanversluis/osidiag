@@ -1,9 +1,3 @@
-# osidiag
-
-<img src="assets/logo.svg" width="136" alt="osidiag pixel-art Ethernet, terminal and OSI-layer multitool logo" />
-
-The compact 7-layer pixel-art logo is generated reproducibly from `scripts/generate-logo.py` (standard library only). Run `python3 scripts/generate-logo.py` to regenerate `assets/logo.svg` and synchronize the SVG with Networknet.
-
 **The Swiss Army knife for network troubleshooting.** One Go CLI that turns local interface state, routing, DNS, TCP connectivity, TLS, HTTP and Wi-Fi observations into an OSI-layer troubleshooting view.
 
 Project home: [networknet.nl/projects/osidiag/](https://networknet.nl/projects/osidiag/) · [Releases](https://github.com/ivanversluis/osidiag/releases) · [Code signing policy](docs/CODE_SIGNING.md)
