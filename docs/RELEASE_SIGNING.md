@@ -5,12 +5,13 @@
 The new one-root-commit repository must be made public only after the [history handoff](PUBLIC_BASELINE.md) and [publication checklist](PUBLICATION_CHECKLIST.md) are complete. No public GitHub Release existed when this procedure was prepared on 11 November 2026. A release tag must point to a reviewed `main` commit and be an annotated Git tag.
 
 ```bash
-git checkout main && git pull --ff-only
-git tag -a v0.4.0 -m "osidiag v0.4.0" # use the actual version after code review
-git push origin v0.4.0
+git switch main && git pull --ff-only
+VERSION=v0.4.1 # example: select a new, unused version after code review
+git tag -a "$VERSION" -m "osidiag $VERSION"
+git push origin "$VERSION"
 ```
 
-Do not create this tag until CI and release preview are green and the publication audit is complete. Never reuse a published tag to replace the attached artifacts.
+Do not create this tag until CI and release preview are green and the publication audit is complete. The initial v0.4.0 tag was valid but its workflow run failed because checkout peeled the local tag reference; after merging the release-workflow fix, use a new version such as v0.4.1. Rerunning v0.4.0 still uses the old workflow from that tagged commit. Never force-move a public release tag or reuse it to replace attached artifacts.
 
 ## Unsigned initial release
 
