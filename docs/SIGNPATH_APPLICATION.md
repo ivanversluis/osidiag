@@ -36,7 +36,7 @@ The Foundation also requires an already released project and sufficient verifiab
 - [x] Unsigned release pipeline exercised. The [release run](https://github.com/ivanversluis/osidiag/actions/runs/45800823995) verified the annotated tag, Windows metadata and unsigned status, then published checksums and build attestations. GitHub has attestations for the downloaded digests; independent attestation signature verification is not recorded here.
 - [x] The published Windows ZIP contains only the project-built `osidiag.exe`, `LICENSE` and `NOTICE`. No separate third-party binary is bundled.
 - [x] Windows PowerShell inspection of the extracted v0.4.1 package reported `NotSigned`, product name `osidiag`, and product and file versions `0.4.1`.
-- [ ] Run a basic diagnostic from the extracted ZIP on native Windows 11 with normal Windows protections intact.
+- [x] Windows smoke test: the maintainer ran `osidiag.exe l1 --output json` from the extracted v0.4.1 ZIP in PowerShell. The JSON reports version `0.4.1` and an `ok` Layer 1 result.
 - [x] The public [Code signing policy](https://networknet.nl/projects/osidiag/code-signing/) is available and documents roles, privacy and portable uninstall. The v0.4.1 release notes link to the repository policy.
 - [x] [Networknet PR #72](https://github.com/ivanversluis/networknet/pull/72) is live. The [project page](https://networknet.nl/projects/osidiag/) and [announcement](https://networknet.nl/notes/osidiag-network-troubleshooting/) link to v0.4.1, label the Windows ZIP unsigned and link to the policy. The project page describes portable installation and removal.
 - [x] Disclose the sole-maintainer roles and the absence of independent review of the maintainer's own commits. SignPath decides whether this model qualifies.
