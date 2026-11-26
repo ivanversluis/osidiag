@@ -1,0 +1,211 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+concurrency:
+  group: osidiag-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify-source:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require annotated tag on reviewed main
+        id: tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Use vMAJOR.MINOR.PATCH"; exit 1; }
+          [[ "$(git cat-file -t "refs/tags/$GITHUB_REF_NAME")" == tag ]] || { echo "Annotated tag required"; exit 1; }
+          git fetch --no-tags origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "Tag commit must be on main"; exit 1; }
+          echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+          cache: false
+      - name: Verify source
+        run: |
+          go vet ./...
+          go test ./...
+
+  linux:
+    needs: verify-source
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+          cache: false
+      - name: Build Linux archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p package tmp
+          cp LICENSE NOTICE tmp/
+          for arch in amd64 arm64; do
+            CGO_ENABLED=0 GOOS=linux GOARCH="$arch" go build -trimpath -ldflags="-s -w -X main.version=${{ needs.verify-source.outputs.version }}" -o tmp/osidiag ./cmd/osidiag
+            tar -C tmp -czf "package/osidiag-linux-${arch}.tar.gz" osidiag LICENSE NOTICE
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-release-packages
+          path: package/*.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
+  windows:
+    needs: verify-source
+    runs-on: windows-latest
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+          cache: false
+      - name: Build with Windows version metadata
+        shell: pwsh
+        run: ./scripts/build-windows.ps1 -Version '${{ needs.verify-source.outputs.version }}' -Output 'dist/osidiag.exe'
+      - name: Upload the original unsigned build to GitHub
+        id: unsigned
+        uses: actions/upload-artifact@v4
+        with:
+          name: osidiag-windows-unsigned-for-signpath
+          path: dist/osidiag.exe
+          if-no-files-found: error
+          retention-days: 7
+      - name: Sign with SignPath Foundation after approval
+        if: vars.SIGNPATH_ENABLED == 'true'
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
+          organization-id: '${{ vars.SIGNPATH_ORGANIZATION_ID }}'
+          project-slug: '${{ vars.SIGNPATH_PROJECT_SLUG }}'
+          signing-policy-slug: '${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}'
+          artifact-configuration-slug: '${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}'
+          github-artifact-id: '${{ steps.unsigned.outputs.artifact-id }}'
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: '3600'
+          output-artifact-directory: signed
+      - name: Verify final Windows EXE and package
+        shell: pwsh
+        env:
+          SIGNPATH_ENABLED: ${{ vars.SIGNPATH_ENABLED }}
+          RELEASE_VERSION: ${{ needs.verify-source.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:SIGNPATH_ENABLED -and $env:SIGNPATH_ENABLED -ne 'true' -and $env:SIGNPATH_ENABLED -ne 'false') {
+            throw 'SIGNPATH_ENABLED must be true or false'
+          }
+          New-Item -ItemType Directory -Force -Path package | Out-Null
+          if ($env:SIGNPATH_ENABLED -eq 'true') {
+            $files = @(Get-ChildItem signed -Filter osidiag.exe -Recurse -File)
+            if ($files.Count -ne 1) { throw "Expected exactly one signed osidiag.exe, got $($files.Count)" }
+            $executable = $files[0].FullName
+            $sig = Get-AuthenticodeSignature -FilePath $executable
+            if ($sig.Status -ne 'Valid' -or $null -eq $sig.SignerCertificate) { throw "Invalid Authenticode status: $($sig.Status)" }
+            if ($sig.SignerCertificate.Subject -notmatch 'SignPath Foundation') { throw "Unexpected signed publisher: $($sig.SignerCertificate.Subject)" }
+            if ($null -eq $sig.TimeStamperCertificate) { throw 'Signed EXE has no trusted timestamp' }
+            $name = 'osidiag-windows-amd64-signed.zip'
+          } else {
+            $executable = (Resolve-Path dist/osidiag.exe).Path
+            $sig = Get-AuthenticodeSignature -FilePath $executable
+            if ($sig.Status -ne 'NotSigned') { throw "Unsigned release expected NotSigned, got $($sig.Status)" }
+            $name = 'osidiag-windows-amd64-unsigned.zip'
+          }
+          $v = (Get-Item $executable).VersionInfo
+          if ($v.ProductName -ne 'osidiag' -or $v.ProductVersion -notlike "$env:RELEASE_VERSION*" -or $v.FileVersion -notlike "$env:RELEASE_VERSION*") {
+            throw "Wrong metadata on release EXE: $($v.ProductName) $($v.ProductVersion) $($v.FileVersion)"
+          }
+          Copy-Item $executable package/osidiag.exe
+          Copy-Item LICENSE,NOTICE package/
+          Compress-Archive -Path package/osidiag.exe,package/LICENSE,package/NOTICE -DestinationPath "package/$name" -CompressionLevel Optimal
+          Remove-Item package/osidiag.exe,package/LICENSE,package/NOTICE
+          Set-Content -Path package/windows-release-kind.txt -Value $name -NoNewline
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-release-package
+          path: |
+            package/*.zip
+            package/windows-release-kind.txt
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: [verify-source, linux, windows]
+    if: github.event.repository.private == false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      attestations: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux-release-packages
+          path: package
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-release-package
+          path: package
+      - name: Validate packages and generate final manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$(find package -maxdepth 1 -name 'osidiag-linux-*.tar.gz' | wc -l)" -eq 2 ]]
+          kind="$(cat package/windows-release-kind.txt)"
+          [[ "$kind" == osidiag-windows-amd64-signed.zip || "$kind" == osidiag-windows-amd64-unsigned.zip ]]
+          [[ -f "package/$kind" ]]
+          [[ "$(find package -maxdepth 1 -name 'osidiag-windows-*.zip' | wc -l)" -eq 1 ]]
+          files="$(unzip -Z1 "package/$kind" | sort)"
+          [[ "$files" == "$(printf '%s\n' LICENSE NOTICE osidiag.exe | sort)" ]]
+          (cd package && sha256sum osidiag-linux-*.tar.gz osidiag-windows-*.zip > SHA256SUMS)
+          printf '%s\n' "Windows package: $kind" "GitHub provenance does not equal Authenticode." > package/release-kind.txt
+      - name: Attest public release archive provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            package/osidiag-linux-*.tar.gz
+            package/osidiag-windows-*.zip
+            package/SHA256SUMS
+      - name: Publish verified release packages
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          kind="$(cat package/windows-release-kind.txt)"
+          if [[ "$kind" == *-signed.zip ]]; then
+            status='Signed Windows build: SignPath Foundation Authenticode; the workflow verified Windows trust and timestamp.'
+          else
+            status='Unsigned Windows preview: Authenticode signing is NOT active. Windows SmartScreen/Smart App Control may warn or block.'
+          fi
+          cat > RELEASE_NOTES.md <<EOF
+          # osidiag ${GITHUB_REF_NAME}
+
+          $status
+
+          Linux AMD64/ARM64 archives and a Windows AMD64 portable executable are attached. Verify the \`SHA256SUMS\` file and GitHub provenance before running. These checks do not replace Windows publisher trust.
+
+          **[Code signing policy](https://github.com/ivanversluis/osidiag/blob/main/docs/CODE_SIGNING.md)** · [Windows verification instructions](https://github.com/ivanversluis/osidiag/blob/main/docs/RELEASE_SIGNING.md) · [Networknet project page](https://networknet.nl/projects/osidiag/)
+          EOF
+          gh release create "$GITHUB_REF_NAME" package/osidiag-*.tar.gz package/osidiag-windows-*.zip package/SHA256SUMS --title "osidiag $GITHUB_REF_NAME" --notes-file RELEASE_NOTES.md --verify-tag

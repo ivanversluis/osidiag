@@ -1,0 +1,111 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: osidiag-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify-and-build:
+    name: Test, security and multi-platform artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: false
+      - name: Verify reproducible pixel logo
+        run: python3 scripts/generate-logo.py --check
+      - name: Normalize Go formatting before verification
+        run: gofmt -w cmd/osidiag/*.go internal/diag/*.go
+      - name: Windows cross-compile check
+        run: GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -o /tmp/osidiag.exe ./cmd/osidiag
+      - name: Go vet
+        run: go vet ./...
+      - name: Unit tests (race and coverage)
+        run: go test -race -coverprofile=coverage.out ./...
+      - name: Staticcheck
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+          "$(go env GOPATH)/bin/staticcheck" ./...
+      - name: Go vulnerability check
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          "$(go env GOPATH)/bin/govulncheck" ./...
+      - name: Gosec security analysis
+        run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          "$(go env GOPATH)/bin/gosec" -exclude=G115,G204,G304,G402 ./...
+      - name: Build static Linux AMD64 and ARM64 archives
+        run: |
+          mkdir -p dist
+          for arch in amd64 arm64; do
+            CGO_ENABLED=0 GOOS=linux GOARCH="$arch" go build -trimpath -ldflags="-s -w" -o dist/osidiag ./cmd/osidiag
+            tar -C dist -czf "osidiag-linux-${arch}.tar.gz" osidiag
+            sha256sum "osidiag-linux-${arch}.tar.gz" > "osidiag-linux-${arch}.tar.gz.sha256"
+          done
+      - name: Upload Linux AMD64 (WSL2)
+        uses: actions/upload-artifact@v4
+        with:
+          name: osidiag-linux-amd64
+          path: |
+            osidiag-linux-amd64.tar.gz
+            osidiag-linux-amd64.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload Linux ARM64
+        uses: actions/upload-artifact@v4
+        with:
+          name: osidiag-linux-arm64
+          path: |
+            osidiag-linux-arm64.tar.gz
+            osidiag-linux-arm64.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Build Windows AMD64
+        run: |
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o osidiag.exe ./cmd/osidiag
+          zip osidiag-windows-amd64.zip osidiag.exe
+          sha256sum osidiag-windows-amd64.zip > osidiag-windows-amd64.zip.sha256
+      - name: Upload Windows AMD64 (unsigned preview)
+        uses: actions/upload-artifact@v4
+        with:
+          name: osidiag-windows-amd64-unsigned
+          path: |
+            osidiag-windows-amd64.zip
+            osidiag-windows-amd64.zip.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+  windows-tests:
+    name: Native Windows API tests and CLI smoke
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: false
+      - name: Native Windows unit tests
+        run: go test ./...
+      - name: Windows static analysis
+        run: go vet ./...
+      - name: Build and test executable
+        shell: pwsh
+        run: |
+          $version = (go run ./cmd/osidiag --version).Trim()
+          if ($LASTEXITCODE -ne 0) { throw 'Could not determine CLI version' }
+          ./scripts/build-windows.ps1 -Version $version -Output 'osidiag.exe'
+          .\osidiag.exe --version
+          $l1 = .\osidiag.exe l1 --output json | ConvertFrom-Json
+          if ($l1.results.Count -ne 1 -or $l1.results[0].status -eq 'fail') { throw 'Native L1 adapter lookup failed' }
+          $l4 = .\osidiag.exe l4 --output json | ConvertFrom-Json
+          if ($l4.results[0].status -ne 'ok') { throw 'Native L4 socket table failed' }
+          $l5 = .\osidiag.exe l5 --output json | ConvertFrom-Json
+          if ($l5.results[0].status -ne 'ok') { throw 'Native L5 TCP state table failed' }
