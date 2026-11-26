@@ -8,7 +8,7 @@ The compact 7-layer pixel-art logo is generated reproducibly from `scripts/gener
 
 Project home: [networknet.nl/projects/osidiag/](https://networknet.nl/projects/osidiag/) · [Releases](https://github.com/ivanversluis/osidiag/releases) · [Code signing policy](docs/CODE_SIGNING.md)
 
-**Publication status:** preview. Public downloads and Windows Authenticode signing are dependent on a reviewed public release and SignPath Foundation approval; do not interpret a checksum or provenance attestation as a trusted Windows publisher signature.
+**Publication status:** public. [v0.4.1](https://github.com/ivanversluis/osidiag/releases/tag/v0.4.1) provides Linux AMD64/ARM64 and portable Windows AMD64 downloads. The Windows v0.4.1 ZIP is explicitly **unsigned**; SignPath Foundation approval and Authenticode signing are still pending. Checksums and provenance attestations do not establish trusted Windows publisher identity.
 
 An OSI network diagnostics CLI for Linux and native Windows 11. Linux system checks use kernel interfaces; Windows uses native IP Helper APIs for adapter, route, ARP, DHCP lease, ICMPv4, TCP and UDP snapshots. Explicit IPv6 ping/traceroute and Wi-Fi radio details still invoke Windows system tools.
 

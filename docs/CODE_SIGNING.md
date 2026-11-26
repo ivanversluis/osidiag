@@ -1,6 +1,6 @@
 # Code signing policy
 
-**Current status (11 November 2026): SignPath Foundation application preparation; no Windows releases are currently Authenticode-signed.** A repository license, build provenance or SHA256SUMS file does not constitute Microsoft-trusted code signing. Do not describe an unsigned binary as signed.
+**Current status (26 November 2026): v0.4.1 is publicly released with an unsigned Windows AMD64 executable. The SignPath Foundation application is not submitted, and no Windows release is Authenticode-signed.** A repository license, build provenance or SHA256SUMS file does not constitute Microsoft-trusted code signing. Do not describe an unsigned binary as signed.
 
 **Free code signing provided by [SignPath.io](https://signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).** This wording describes the planned service; it does not imply that signing has been approved or activated.
 
@@ -8,7 +8,7 @@
 
 - Official source: https://github.com/ivanversluis/osidiag
 - Project homepage and download information: https://networknet.nl/projects/osidiag/
-- Official download page (once first tagged release exists): https://github.com/ivanversluis/osidiag/releases
+- Official download page: https://github.com/ivanversluis/osidiag/releases/tag/v0.4.1
 - Only the **Windows AMD64 `osidiag.exe`** built from this repository's own Go source in the GitHub-hosted release workflow is eligible for Foundation signing. No third-party binaries, local rebuilds or externally supplied EXEs will be sent for signature.
 - Linux tarballs are not Authenticode-signed; hashes and GitHub attestations cover their provenance.
 - Publication and signing are independent: unsigned releases may be available before Foundation acceptance.
@@ -16,8 +16,6 @@
 ## Team responsibilities
 
 This is a **single-maintainer project**. The same person controls direct source changes, reviews outside contributions and approves releases manually; no independent review of the maintainer's own commits is asserted. SignPath lists author, reviewer and approver roles but does not explicitly require separate individuals. Its approval is discretionary and may depend on project reputation.
-
-## Team responsibilities
 
 - **Authors / maintainers:** [Ivan Versluis](https://github.com/ivanversluis), repository owner, controls direct writes and reviewed changes.
 - **Reviewers:** Ivan Versluis reviews changes submitted by other contributors. Contributors do not self-approve their own release changes; the project requires an independent reviewer if responsibility is delegated to another author.
