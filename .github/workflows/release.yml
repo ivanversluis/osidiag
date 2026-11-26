@@ -210,6 +210,8 @@ jobs:
 
           $status
 
+          osidiag is an Apache-2.0 Go CLI for OSI-layer network troubleshooting on Windows and Linux. It checks local interfaces and Wi-Fi, ARP/neighbor state, routes and local TCP states; requested target checks cover ICMP/traceroute, direct TCP, TLS certificates and SNI, DNS and HTTP. It is intended for focused connectivity diagnostics, not vulnerability scanning or exploitation.
+
           Linux AMD64/ARM64 archives and a Windows AMD64 portable executable are attached. Verify the \`SHA256SUMS\` file and GitHub provenance before running. These checks do not replace Windows publisher trust.
 
           **[Code signing policy](https://github.com/ivanversluis/osidiag/blob/main/docs/CODE_SIGNING.md)** · [Windows verification instructions](https://github.com/ivanversluis/osidiag/blob/main/docs/RELEASE_SIGNING.md) · [Networknet project page](https://networknet.nl/projects/osidiag/)
