@@ -24,7 +24,13 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Use vMAJOR.MINOR.PATCH"; exit 1; }
-          [[ "$(git cat-file -t "refs/tags/$GITHUB_REF_NAME")" == tag ]] || { echo "Annotated tag required"; exit 1; }
+          # checkout@v4 can replace a local annotated tag ref with its peeled
+          # commit while checking out GITHUB_SHA. Fetch the remote tag into a
+          # separate ref to verify the actual tag object, not the local checkout.
+          tag_ref="refs/release-verification/$GITHUB_REF_NAME"
+          git fetch --no-tags origin "+refs/tags/$GITHUB_REF_NAME:$tag_ref"
+          [[ "$(git cat-file -t "$tag_ref")" == tag ]] || { echo "Annotated tag required"; exit 1; }
+          [[ "$(git rev-parse "$tag_ref^{commit}")" == "$GITHUB_SHA" ]] || { echo "Tag commit differs from workflow trigger"; exit 1; }
           git fetch --no-tags origin main
           git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "Tag commit must be on main"; exit 1; }
           echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
